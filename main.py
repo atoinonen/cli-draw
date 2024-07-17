@@ -91,6 +91,10 @@ def main(stdscr: curses.window):
                 count += 1
             else:
                 draw = False
+            if buttonstate == 4096:
+                if (y,x) in picture:
+                    del picture[(y,x)]
+                stdscr.addch(y,x," ")
             stdscr.addstr(3, 0, "count: {}     ".format(count))
             char = hex(stdscr.inch(y,x))
             stdscr.addstr(5, 0, "character: {}     ".format(char))
