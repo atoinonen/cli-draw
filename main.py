@@ -51,6 +51,22 @@ class Pixel:
         if bottom:
             self.bottom = Line.Light
 
+    def erase(self, top = False, left = False, right = False, bottom = False):
+        if top:
+            self.top = Line.Empty
+        if left:
+            self.left = Line.Empty
+        if right:
+            self.right = Line.Empty
+        if bottom:
+            self.bottom = Line.Empty
+    
+    def __eq__(self, other):
+        return self.top == other.top \
+        and self.left == other.left \
+        and self.right == other.right \
+        and self.bottom == other.bottom
+
 
 def main(stdscr: curses.window):
     curses.curs_set(0)
@@ -60,32 +76,45 @@ def main(stdscr: curses.window):
     picture = {}
     draw = False
     previous = (0,0)
+    modifier_button = 0
+    prior_buttonstate = 0
     while True:
         key = stdscr.getch()
         if key == curses.KEY_MOUSE:
             _, x, y, _, buttonstate = curses.getmouse()
-            stdscr.addstr(0, 0, "buttonstate: {}            ".format(buttonstate))
+            if prior_buttonstate != buttonstate:
+                modifier_button = prior_buttonstate
+                prior_buttonstate = buttonstate
+            stdscr.addstr(0, 0, "buttonstate: {} previous: {}           ".format(buttonstate, modifier_button))
             stdscr.addstr(1, 0, "x: {} y: {}            ".format(x, y))
             if buttonstate == 268435456:
                 if draw:
+                    if modifier_button == 2048 or modifier_button == 4096:
+                        action = Pixel.erase
+                    else:
+                        action = Pixel.draw
                     if previous not in picture:
                         picture[previous] = Pixel()
                     if (y,x) not in picture:
                         picture[(y,x)] = Pixel()
                     if previous[0] < y:
-                        picture[previous].draw(bottom=True)
-                        picture[(y,x)].draw(top=True)
+                        action(picture[previous], bottom=True)
+                        action(picture[(y,x)], top=True)
                     elif previous[0] > y:
-                        picture[previous].draw(top=True)
-                        picture[(y,x)].draw(bottom=True)
+                        action(picture[previous], top=True)
+                        action(picture[(y,x)], bottom=True)
                     if previous[1] < x:
-                        picture[previous].draw(right=True)
-                        picture[(y,x)].draw(left=True)
+                        action(picture[previous], right=True)
+                        action(picture[(y,x)], left=True)
                     elif previous[1] > x:
-                        picture[previous].draw(left=True)
-                        picture[(y,x)].draw(right=True)
+                        action(picture[previous], left=True)
+                        action(picture[(y,x)], right=True)
                     stdscr.addch(previous[0], previous[1], picture[previous].icon())
                     stdscr.addch(y,x, picture[(y,x)].icon())
+                    if picture[previous] == Pixel():
+                        del picture[previous]
+                    if picture[(y,x)] == Pixel():
+                        del picture[(y,x)]
                 previous = (y,x)
                 draw = True
                 count += 1
@@ -99,5 +128,6 @@ def main(stdscr: curses.window):
             char = hex(stdscr.inch(y,x))
             stdscr.addstr(5, 0, "character: {}     ".format(char))
             stdscr.addstr(7, 0, "─━│┃┌┍┎┏┐┑┒┓")
+            stdscr.addstr(8, 0, f"picture size: {len(picture)}")
 
 curses.wrapper(main)
